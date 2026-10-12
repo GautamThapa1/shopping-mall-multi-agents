@@ -11,6 +11,7 @@ def _vector_literal(vector: list[float]) -> str:
     return f"[{','.join(str(value) for value in vector)}]"
 
 
+# Purchase Specialist tool: find suitable products before ordering.
 @tool
 def get_recommendation(
     query: Annotated[str, "The user's product request"],

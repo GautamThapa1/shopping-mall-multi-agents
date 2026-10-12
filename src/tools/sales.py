@@ -8,6 +8,7 @@ from src.database import get_connection
 from src.tools.common import get_user_id
 
 
+# Sales Specialist tools: review seller sales, replenish stock, and update shipping.
 @tool
 def check_sales_record(config: RunnableConfig) -> list[tuple[object, ...]] | str:
     """Return purchases made from listings owned by the configured seller."""

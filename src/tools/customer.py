@@ -9,6 +9,7 @@ from src.models import User
 from src.tools.common import get_user_id
 
 
+# Manager tool: validate the incoming user before specialist routing.
 @tool
 def check_validation(config: RunnableConfig) -> User | None:
     """Return the service user identified by the configured user ID, if present."""
@@ -26,6 +27,7 @@ def check_validation(config: RunnableConfig) -> User | None:
         return None
 
 
+    # Purchase Specialist tools: purchase, cancel, and check customer orders.
 @tool
 def purchase_product(
     inventory_id: Annotated[int, "ID of the inventory listing to purchase"],

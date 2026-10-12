@@ -35,7 +35,7 @@ def update_dialog_stack(
 
 
 class State(TypedDict):
-    user_info: User
+    user_info: User | None
     messages: Annotated[list[AnyMessage], add_messages]
     dialog_state: Annotated[list[DialogState], update_dialog_stack]
 
