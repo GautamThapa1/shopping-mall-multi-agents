@@ -74,30 +74,6 @@ body {
   color: var(--lime);
 }
 
-.service-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #d6e3dc;
-  font-size: 12px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: #d5b45c;
-  border-radius: 50%;
-}
-
-.service-status.is-online .status-dot {
-  background: var(--lime);
-  box-shadow: 0 0 0 3px rgb(213 233 130 / 16%);
-}
-
-.service-status.is-offline .status-dot {
-  background: var(--coral);
-}
-
 .chat-layout {
   max-width: 1000px;
   padding-top: clamp(24px, 6vh, 58px);
