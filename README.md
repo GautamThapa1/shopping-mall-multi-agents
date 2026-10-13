@@ -7,9 +7,10 @@ Bootstrap. Customers can discover products and manage their orders; shopkeepers
 can inspect inventory and sales, restock listings, and update purchase status.
 
 The project demonstrates a role-aware multi-agent workflow: a manager routes
-requests to focused Purchase and Sales Specialists, each with only the tools for
-its domain. Product recommendations use vector similarity over seller listing
-descriptions stored in PostgreSQL with pgvector.
+requests using the verified account role to focused Purchase and Sales
+Specialists, each with only the tools for its domain. Product recommendations
+use vector similarity over seller listing descriptions stored in PostgreSQL
+with pgvector.
 
 ## Product Demo
 
@@ -119,7 +120,9 @@ uv run --frozen python -m src.data_preperation.seller_products
 ```
 
 This data-generation script uses the configured OpenAI API key. Connect to
-Shopkeeper with the ID `demo-vendor`.
+Shopkeeper with the ID `demo-vendor`. It creates inventory, not purchases, so
+sales history is empty until a shopper places an order from one of the vendor's
+listings.
 
 ## API
 
