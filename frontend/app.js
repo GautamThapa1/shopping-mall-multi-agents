@@ -29,6 +29,34 @@ function threadStorageKey(role = activeRole, accountId = userId) {
   return `mall-concierge-thread-${role}-${accountId}`;
 }
 
+function transcriptStorageKey(role = activeRole, accountId = userId) {
+  return `mall-concierge-messages-${role}-${accountId}`;
+}
+
+function loadTranscript(role = activeRole, accountId = userId) {
+  if (!accountId) return [];
+  try {
+    const transcript = JSON.parse(
+      sessionStorage.getItem(transcriptStorageKey(role, accountId)) || "[]",
+    );
+    return Array.isArray(transcript)
+      ? transcript.filter((message) => typeof message.text === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTranscriptMessage(text, role, extraClass = "") {
+  if (!userId || extraClass === "typing") return;
+  const transcript = loadTranscript();
+  transcript.push({ text, role, extraClass });
+  sessionStorage.setItem(
+    transcriptStorageKey(),
+    JSON.stringify(transcript.slice(-100)),
+  );
+}
+
 async function readApiResponse(response) {
   const body = await response.text();
   if (!body) return {};
@@ -39,7 +67,7 @@ async function readApiResponse(response) {
   }
 }
 
-function addMessage(text, role, extraClass = "") {
+function appendMessage(text, role, extraClass = "") {
   const row = document.createElement("div");
   row.className = `message-row ${role} ${extraClass}`.trim();
 
@@ -59,6 +87,12 @@ function addMessage(text, role, extraClass = "") {
   return row;
 }
 
+function addMessage(text, role, extraClass = "") {
+  const row = appendMessage(text, role, extraClass);
+  saveTranscriptMessage(text, role, extraClass);
+  return row;
+}
+
 function resetMessages() {
   messages.replaceChildren();
   const welcome = document.createElement("div");
@@ -74,10 +108,20 @@ function resetMessages() {
   messages.append(welcome);
 }
 
-function startNewChat() {
-  if (userId) sessionStorage.removeItem(threadStorageKey());
-  threadId = "";
+function restoreMessages() {
   resetMessages();
+  loadTranscript().forEach(({ text, role, extraClass }) => {
+    appendMessage(text, role, extraClass);
+  });
+}
+
+function startNewChat() {
+  if (userId) {
+    sessionStorage.removeItem(threadStorageKey());
+    sessionStorage.removeItem(transcriptStorageKey());
+  }
+  threadId = "";
+  restoreMessages();
   messageInput.focus();
 }
 
@@ -103,7 +147,7 @@ function showRole(role) {
   document.querySelectorAll("[data-prompt]").forEach((button) => {
     button.hidden = button.dataset.role !== role;
   });
-  resetMessages();
+  restoreMessages();
 
   if (isShopper) {
     shopperSessionState.textContent = userId ? "Guest account ready" : "Preparing your account...";
@@ -152,7 +196,6 @@ roleTabs.forEach((tab) => {
 shopkeeperChange.addEventListener("click", () => {
   if (userId) {
     sessionStorage.removeItem(userStorageKeys.shopkeeper);
-    sessionStorage.removeItem(threadStorageKey("shopkeeper", userId));
   }
   shopkeeperIdInput.value = userId;
   userId = "";
@@ -183,12 +226,12 @@ shopkeeperLogin.addEventListener("submit", async (event) => {
 
     userId = data.user_id;
     sessionStorage.setItem(userStorageKeys.shopkeeper, userId);
-    threadId = "";
+    threadId = sessionStorage.getItem(threadStorageKey("shopkeeper", userId)) || "";
     shopkeeperLogin.hidden = true;
     shopkeeperSession.hidden = false;
     shopkeeperSessionState.textContent = "Shopkeeper account verified";
     sendButton.disabled = false;
-    resetMessages();
+    restoreMessages();
     messageInput.focus();
   } catch (error) {
     shopkeeperSessionState.textContent = error.message || "The service could not be reached.";

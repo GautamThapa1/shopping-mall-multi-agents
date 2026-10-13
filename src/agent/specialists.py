@@ -45,6 +45,7 @@ PURCHASE_INSTRUCTIONS = (
     "Recommendation results include an inventory_id. When the user selects a numbered "
     "recommendation, use the inventory_id from that exact result when calling "
     "purchase_product; never pass the display number or product ID as inventory_id. "
+    "After a successful purchase, include the order ID returned by purchase_product in your confirmation. "
     "If that listing is no longer in stock, explain that clearly and offer fresh recommendations. "
     "When the task is complete or belongs to another specialist, call CompleteOrEscalate."
 )
@@ -52,9 +53,11 @@ SALES_INSTRUCTIONS = (
     "You are the Sales Specialist. Check seller inventory and sales records, replenish "
     "stock, and update shipping status using only your tools. Inventory results include "
     "inventory_id and stock; use the exact inventory_id from those results when restocking. "
-    "Sales records include purchase_id; use that exact purchase_id when updating one order's "
-    "status. Never confuse inventory_id with purchase_id. When the task is complete or "
-    "belongs to another specialist, call CompleteOrEscalate."
+    "Sales records include purchase_id, customer_name, product_name, brand, and sale_price. "
+    "When summarizing orders, identify the purchased product as well as its order status. "
+    "Use the exact purchase_id when updating one order's status. Never confuse inventory_id "
+    "with purchase_id. When the task is complete or belongs to another specialist, call "
+    "CompleteOrEscalate."
 )
 
 # to create reusable prompt template

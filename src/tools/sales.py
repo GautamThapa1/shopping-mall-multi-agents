@@ -11,22 +11,27 @@ from src.tools.common import get_user_id
 
 # Sales Specialist tools: review seller sales, replenish stock, and update shipping.
 @tool
-def check_sales_record(config: RunnableConfig) -> list[tuple[object, ...]] | str:
-    """Return purchases made from listings owned by the configured seller."""
+def check_sales_record(config: RunnableConfig) -> list[dict[str, object]] | str:
+    """Return seller orders with customer and purchased-product details."""
     try:
-        with get_connection() as conn:
-            return conn.execute(
+        with get_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(
                 """
-                  SELECT p.id AS purchase_id, p.customer_id, customer.name AS customer_name,
-                      p.inventory_id, p.status, p.created_at, i.product_id, i.price, i.remains
+                SELECT p.id AS purchase_id, p.customer_id,
+                       customer.name AS customer_name, p.inventory_id,
+                       i.product_id, product.name AS product_name, product.brand,
+                       product.gender, product.primary_color, i.price AS sale_price,
+                       p.status, p.created_at
                 FROM purchase AS p
                 JOIN inventory AS i ON i.id = p.inventory_id
-                  JOIN service_user AS customer ON customer.id = p.customer_id
+                JOIN product ON product.id = i.product_id
+                JOIN service_user AS customer ON customer.id = p.customer_id
                 WHERE i.user_id = %s
                 ORDER BY p.created_at DESC
                 """,
                 (get_user_id(config),),
-            ).fetchall()
+            )
+            return cursor.fetchall()
     except (PsycopgError, ValueError):
         return "Sales records could not be retrieved."
 

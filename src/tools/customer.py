@@ -43,11 +43,16 @@ def purchase_product(
             )
             if cursor.fetchone() is None:
                 return "That listing is unavailable or out of stock."
-            conn.execute(
-                "INSERT INTO purchase (customer_id, inventory_id, status) VALUES (%s, %s, %s)",
+            purchase = conn.execute(
+                """
+                INSERT INTO purchase (customer_id, inventory_id, status)
+                VALUES (%s, %s, %s)
+                RETURNING id
+                """,
                 (customer_id, inventory_id, "Pre-dispatch"),
             )
-        return "The purchase has been completed."
+            order = purchase.fetchone()
+        return f"The purchase has been completed. Your order ID is {order[0]}."
     except (PsycopgError, ValueError):
         return "The purchase could not be completed."
 
