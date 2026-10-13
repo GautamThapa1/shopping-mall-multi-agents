@@ -22,18 +22,20 @@ records, restocking, and shipping updates to the Sales Specialist.
 Start the API locally with:
 
 ```bash
-uv run --frozen uvicorn src.api.main:app --reload
+uv run --frozen uvicorn src.api:app --reload
 ```
 
 Or run the full Docker Compose stack with `docker compose up --build`. The API
 is available at `http://localhost:8000`; interactive documentation is at
 `http://localhost:8000/docs`.
+The Bootstrap chat frontend is served at `http://localhost:8000/`.
 
-Send a message with `POST /api/v1/chat`:
+The page creates a guest customer ID automatically through `POST /api/v1/sessions`
+and keeps it for the current browser tab. Send a message with `POST /api/v1/chat`:
 
 ```json
 {
-	"user_id": "customer-id",
+	"user_id": "generated-guest-id",
 	"message": "Recommend a blue shirt"
 }
 ```
@@ -43,9 +45,8 @@ the next request to continue the same conversation. Conversation memory is
 in-process and is lost when the API restarts. Set `CORS_ORIGINS` to a
 comma-separated list of frontend origins; it defaults to localhost ports 5500.
 
-The current API accepts `user_id` in the request body for development and
-validates that it exists. This is not authentication; add authenticated user
-identity before exposing the API to untrusted clients.
+Guest IDs are identifiers, not authentication credentials. Add authenticated
+user identity before exposing the API to untrusted clients.
 
 Generate the graph's Mermaid source without connecting to the database or calling
 the model with:
