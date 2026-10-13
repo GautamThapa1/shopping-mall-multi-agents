@@ -16,6 +16,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;
@@ -134,6 +138,41 @@ body {
   font-weight: 500;
 }
 
+.role-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 18px 30px 0;
+  padding: 4px;
+  background: #edf2ec;
+  border-radius: 8px;
+}
+
+.role-tab {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.role-tab.active {
+  color: var(--forest-deep);
+  background: #fff;
+  border-color: var(--line);
+  box-shadow: 0 2px 5px rgb(28 48 43 / 7%);
+}
+
+.role-tab i {
+  font-size: 15px;
+}
+
 .new-chat-button {
   display: inline-flex;
   align-items: center;
@@ -161,18 +200,52 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
-.session-label {
-  width: 138px;
+.session-summary {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+}
+
+.shopkeeper-login {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(140px, 260px) auto minmax(130px, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.shopkeeper-login label {
   color: var(--muted);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
 }
 
-.session-summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.shopkeeper-login .form-control {
+  min-height: 38px;
+  border-color: var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.shopkeeper-connect {
+  min-height: 38px;
+  color: #fff;
+  background: var(--forest);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shopkeeper-connect:hover {
+  color: var(--forest-deep);
+  background: var(--lime);
+}
+
+.session-feedback {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .session-icon {
@@ -199,6 +272,24 @@ body {
   margin-top: 1px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.change-shopkeeper {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 9px;
+  color: var(--forest);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.change-shopkeeper:hover {
+  background: #edf4e6;
+  border-color: #b7c9a7;
 }
 
 .messages {
@@ -417,8 +508,26 @@ body {
     padding: 12px 17px;
   }
 
-  .session-label {
-    width: auto;
+  .role-switch {
+    margin: 14px 16px 0;
+  }
+
+  .role-tab {
+    min-height: 40px;
+  }
+
+  .shopkeeper-login {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .shopkeeper-login label,
+  .session-feedback {
+    grid-column: 1 / -1;
+  }
+
+  .shopkeeper-login .form-control {
+    min-width: 0;
   }
 
   .messages {

@@ -9,6 +9,7 @@ from src.agent.nodes import (
     route_manager,
     route_specialist,
     route_user,
+    role_restricted,
     unauthorized,
     validate_user,
 )
@@ -27,6 +28,7 @@ def build_agent_graph(
     graph = StateGraph(State)
     graph.add_node("validate_user", validate_user)
     graph.add_node("unauthorized", unauthorized)
+    graph.add_node("role_restricted", role_restricted)
     graph.add_node("manager", manager)
     graph.add_node(
         "enter_purchase_specialist",
@@ -55,9 +57,11 @@ def build_agent_graph(
         {
             "enter_purchase_specialist": "enter_purchase_specialist",
             "enter_sales_specialist": "enter_sales_specialist",
+            "role_restricted": "role_restricted",
             END: END,
         },
     )
+    graph.add_edge("role_restricted", END)
     graph.add_edge("enter_purchase_specialist", "purchase_specialist")
     graph.add_conditional_edges(
         "purchase_specialist",

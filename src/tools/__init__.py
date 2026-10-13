@@ -9,7 +9,7 @@ from src.tools.customer import (
 from src.tools.recommendations import get_recommendation
 
 # Sales Specialist: review seller sales, restock listings, and update shipping status.
-from src.tools.sales import check_sales_record, restock, update_item_status
+from src.tools.sales import check_inventory, check_sales_record, restock, update_item_status
 
 __all__ = [
     # Manager
@@ -20,6 +20,7 @@ __all__ = [
     "get_recommendation",
     "purchase_product",
     # Sales Specialist
+    "check_inventory",
     "check_sales_record",
     "restock",
     "update_item_status",

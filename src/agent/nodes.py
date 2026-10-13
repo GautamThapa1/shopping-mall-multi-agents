@@ -74,11 +74,18 @@ def route_user(state: State) -> str:
 
 def route_manager(state: State) -> str:
     assistant_message = cast(AIMessage, state["messages"][-1]) # cast = Trust me it is AI or human message
-    for call in assistant_message.tool_calls:
-        if call["name"] == ToPurchaseSpecialistAssistant.__name__:
+    user = state.get("user_info")
+    user_type = user.type if user is not None else None
+    handoff_names = {
+        ToPurchaseSpecialistAssistant.__name__,
+        ToSalesSpecialistAssistant.__name__,
+    }
+    if any(call["name"] in handoff_names for call in assistant_message.tool_calls):
+        if user_type == "customer":
             return "enter_purchase_specialist"
-        if call["name"] == ToSalesSpecialistAssistant.__name__:
+        if user_type == "vendor":
             return "enter_sales_specialist"
+        return "role_restricted"
     return END
 
 
@@ -101,6 +108,21 @@ def unauthorized(state: State) -> dict[str, list[BaseMessage]]:
             AIMessage(
                 content="I could not verify your account. Please check your user ID and try again."
             )
+        ]
+    }
+
+
+def role_restricted(state: State) -> dict[str, list[ToolMessage]]:
+    assistant_message = cast(AIMessage, state["messages"][-1])
+    user = state.get("user_info")
+    if user is not None and user.type == "vendor":
+        message = "Shopkeeper accounts can only use sales, stock, and order-management services."
+    else:
+        message = "Shopper accounts can only use product and personal-order services."
+    return {
+        "messages": [
+            ToolMessage(content=message, tool_call_id=call["id"])
+            for call in assistant_message.tool_calls
         ]
     }
 

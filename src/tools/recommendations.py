@@ -3,6 +3,7 @@ from typing import Annotated
 from langchain_core.tools import tool
 from openai import OpenAIError
 from psycopg import Error as PsycopgError
+from psycopg.rows import dict_row
 
 from src.database import get_connection
 
@@ -18,7 +19,7 @@ def get_recommendation(
     color: Annotated[str | None, "Optional product color"] = None,
     count: Annotated[int | None, "Number of products to recommend"] = None,
 ) -> list[tuple[object, ...]] | str:
-    """Recommend in-stock products using description similarity and an optional color."""
+    """Recommend in-stock products with inventory IDs for later purchase."""
     if count is not None and count < 1:
         return "Recommendation count must be at least 1."
 
@@ -27,7 +28,7 @@ def get_recommendation(
 
         embedding = OpenAIEmbeddings(model="text-embedding-3-small").embed_query(query)
         sql = """
-            SELECT p.name, p.brand, p.gender, i.price, i.description
+            SELECT i.id AS inventory_id, p.name, p.brand, p.gender, i.price, i.description
             FROM inventory AS i
             JOIN product AS p ON p.id = i.product_id
             WHERE i.remains > 0
@@ -39,7 +40,8 @@ def get_recommendation(
         sql += " ORDER BY i.description_ebd <=> %s::vector LIMIT %s"
         parameters.extend((_vector_literal(embedding), count or 5))
 
-        with get_connection() as conn:
-            return conn.execute(sql, parameters).fetchall()
+        with get_connection() as conn, conn.cursor(row_factory=dict_row) as cursor:
+            cursor.execute(sql, parameters)
+            return cursor.fetchall()
     except (OpenAIError, ImportError, PsycopgError, ValueError):
         return "The recommendation search could not be completed."

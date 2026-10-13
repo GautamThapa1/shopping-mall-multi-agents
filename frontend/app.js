@@ -3,15 +3,41 @@ const chatForm = document.querySelector("#chat-form");
 const sendButton = document.querySelector("#send-button");
 const newChatButton = document.querySelector("#new-chat");
 const messages = document.querySelector("#messages");
-const sessionState = document.querySelector("#session-state");
+const modeTitle = document.querySelector("#mode-title");
+const shopperSession = document.querySelector("#shopper-session");
+const shopperSessionState = document.querySelector("#shopper-session-state");
+const shopkeeperLogin = document.querySelector("#shopkeeper-login");
+const shopkeeperIdInput = document.querySelector("#shopkeeper-id");
+const shopkeeperConnect = document.querySelector("#shopkeeper-connect");
+const shopkeeperSession = document.querySelector("#shopkeeper-session");
+const shopkeeperChange = document.querySelector("#shopkeeper-change");
+const shopkeeperSessionState = document.querySelector("#shopkeeper-session-state");
 const serviceStatus = document.querySelector("#service-status");
 const serviceStatusText = document.querySelector("#service-status-text");
+const roleTabs = document.querySelectorAll("[data-role].role-tab");
 
-const userStorageKey = "mall-concierge-guest-user-id";
-const threadStorageKey = "mall-concierge-thread-id";
-let userId = sessionStorage.getItem(userStorageKey) || "";
-let threadId = sessionStorage.getItem(threadStorageKey) || "";
-sendButton.disabled = !userId;
+const userStorageKeys = {
+  shopper: "mall-concierge-guest-user-id",
+  shopkeeper: "mall-concierge-shopkeeper-user-id",
+};
+let activeRole = "shopper";
+let userId = "";
+let threadId = "";
+sendButton.disabled = true;
+
+function threadStorageKey(role = activeRole, accountId = userId) {
+  return `mall-concierge-thread-${role}-${accountId}`;
+}
+
+async function readApiResponse(response) {
+  const body = await response.text();
+  if (!body) return {};
+  try {
+    return JSON.parse(body);
+  } catch {
+    return { detail: body };
+  }
+}
 
 function addMessage(text, role, extraClass = "") {
   const row = document.createElement("div");
@@ -36,16 +62,55 @@ function addMessage(text, role, extraClass = "") {
 function resetMessages() {
   messages.replaceChildren();
   const welcome = document.createElement("div");
+  const heading = document.createElement("h2");
+  const description = document.createElement("p");
   welcome.className = "welcome-message";
-  welcome.innerHTML = '<span class="welcome-mark"><i class="bi bi-stars" aria-hidden="true"></i></span><div><h2>What are you looking for?</h2><p>Ask about a product, an order, or your seller account.</p></div>';
+  welcome.innerHTML = '<span class="welcome-mark"><i class="bi bi-stars" aria-hidden="true"></i></span><div class="welcome-copy"></div>';
+  heading.textContent = activeRole === "shopper" ? "What are you looking for?" : "What needs your attention?";
+  description.textContent = activeRole === "shopper"
+    ? "Find products, place orders, or check a purchase."
+    : "Review sales, restock products, or update an order.";
+  welcome.querySelector(".welcome-copy").append(heading, description);
   messages.append(welcome);
 }
 
 function startNewChat() {
+  if (userId) sessionStorage.removeItem(threadStorageKey());
   threadId = "";
-  sessionStorage.removeItem(threadStorageKey);
   resetMessages();
   messageInput.focus();
+}
+
+function showRole(role) {
+  activeRole = role;
+  userId = sessionStorage.getItem(userStorageKeys[role]) || "";
+  threadId = userId ? sessionStorage.getItem(threadStorageKey(role, userId)) || "" : "";
+  const isShopper = role === "shopper";
+
+  roleTabs.forEach((tab) => {
+    const isActive = tab.dataset.role === role;
+    tab.classList.toggle("active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
+  modeTitle.textContent = isShopper ? "Shop" : "Shopkeeper desk";
+  shopperSession.hidden = !isShopper;
+  shopkeeperLogin.hidden = isShopper || Boolean(userId);
+  shopkeeperSession.hidden = isShopper || !userId;
+  shopkeeperSessionState.textContent = userId
+    ? "Use sales, stock, and order tools"
+    : "Use your existing shopkeeper account ID.";
+  sendButton.disabled = !userId;
+  document.querySelectorAll("[data-prompt]").forEach((button) => {
+    button.hidden = button.dataset.role !== role;
+  });
+  resetMessages();
+
+  if (isShopper) {
+    shopperSessionState.textContent = userId ? "Guest account ready" : "Preparing your account...";
+    initializeShopperSession();
+  } else if (!userId) {
+    shopkeeperSessionState.textContent = "Use your existing vendor account ID.";
+  }
 }
 
 async function checkService() {
@@ -61,6 +126,76 @@ async function checkService() {
     serviceStatusText.textContent = "Service offline";
   }
 }
+
+async function initializeShopperSession() {
+  if (userId || activeRole !== "shopper") return;
+  try {
+    const response = await fetch("/api/v1/sessions", { method: "POST" });
+    const data = await readApiResponse(response);
+    if (!response.ok) throw new Error(data.detail || "Guest account could not be created.");
+    sessionStorage.setItem(userStorageKeys.shopper, data.user_id);
+    if (activeRole !== "shopper") return;
+    userId = data.user_id;
+    shopperSessionState.textContent = "Guest account ready";
+    sendButton.disabled = false;
+  } catch (error) {
+    if (activeRole !== "shopper") return;
+    shopperSessionState.textContent = "Could not create your guest account.";
+    addMessage(error.message || "The service could not be reached.", "assistant", "error");
+  }
+}
+
+roleTabs.forEach((tab) => {
+  tab.addEventListener("click", () => showRole(tab.dataset.role));
+});
+
+shopkeeperChange.addEventListener("click", () => {
+  if (userId) {
+    sessionStorage.removeItem(userStorageKeys.shopkeeper);
+    sessionStorage.removeItem(threadStorageKey("shopkeeper", userId));
+  }
+  shopkeeperIdInput.value = userId;
+  userId = "";
+  threadId = "";
+  shopkeeperSession.hidden = true;
+  shopkeeperLogin.hidden = false;
+  shopkeeperSessionState.textContent = "Enter a different shopkeeper account ID.";
+  sendButton.disabled = true;
+  resetMessages();
+  shopkeeperIdInput.focus();
+});
+
+shopkeeperLogin.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const requestedUserId = shopkeeperIdInput.value.trim();
+  if (!requestedUserId || shopkeeperConnect.disabled) return;
+
+  shopkeeperConnect.disabled = true;
+  shopkeeperSessionState.textContent = "Checking shopkeeper account...";
+  try {
+    const response = await fetch("/api/v1/sessions/shopkeeper", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: requestedUserId }),
+    });
+    const data = await readApiResponse(response);
+    if (!response.ok) throw new Error(data.detail || "Shopkeeper account could not be verified.");
+
+    userId = data.user_id;
+    sessionStorage.setItem(userStorageKeys.shopkeeper, userId);
+    threadId = "";
+    shopkeeperLogin.hidden = true;
+    shopkeeperSession.hidden = false;
+    shopkeeperSessionState.textContent = "Shopkeeper account verified";
+    sendButton.disabled = false;
+    resetMessages();
+    messageInput.focus();
+  } catch (error) {
+    shopkeeperSessionState.textContent = error.message || "The service could not be reached.";
+  } finally {
+    shopkeeperConnect.disabled = false;
+  }
+});
 
 newChatButton.addEventListener("click", startNewChat);
 
@@ -95,48 +230,25 @@ chatForm.addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ user_id: userId, message, thread_id: threadId || null }),
     });
-    const data = await response.json();
+    const data = await readApiResponse(response);
     if (!response.ok) {
       const detail = typeof data.detail === "string" ? data.detail : "The message could not be sent.";
       throw new Error(detail);
     }
 
     threadId = data.thread_id;
-    sessionStorage.setItem(threadStorageKey, threadId);
+    sessionStorage.setItem(threadStorageKey(), threadId);
     pendingMessage.remove();
     addMessage(data.response, "assistant");
   } catch (error) {
     pendingMessage.remove();
     addMessage(error.message || "The service could not be reached.", "assistant", "error");
   } finally {
-    sendButton.disabled = false;
+    sendButton.disabled = !userId;
     sendButton.innerHTML = '<i class="bi bi-arrow-up" aria-hidden="true"></i>';
     messageInput.focus();
   }
 });
 
-async function initializeGuestSession() {
-  if (userId) {
-    sessionState.textContent = "Guest account ready";
-    sendButton.disabled = false;
-    return;
-  }
-
-  try {
-    const response = await fetch("/api/v1/sessions", { method: "POST" });
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.detail || "Guest account could not be created.");
-    }
-    userId = data.user_id;
-    sessionStorage.setItem(userStorageKey, userId);
-    sessionState.textContent = "Guest account ready";
-    sendButton.disabled = false;
-  } catch (error) {
-    sessionState.textContent = "Could not create guest account. Reload to retry.";
-    addMessage(error.message || "The service could not be reached.", "assistant", "error");
-  }
-}
-
 checkService();
-initializeGuestSession();
+showRole("shopper");

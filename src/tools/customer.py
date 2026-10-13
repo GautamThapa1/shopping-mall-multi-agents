@@ -33,7 +33,7 @@ def purchase_product(
     inventory_id: Annotated[int, "ID of the inventory listing to purchase"],
     config: RunnableConfig,
 ) -> str:
-    """Purchase one unit of an in-stock inventory listing."""
+    """Purchase one unit using the inventory_id returned by product recommendations."""
     try:
         customer_id = get_user_id(config)
         with get_connection() as conn:

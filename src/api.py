@@ -1,7 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from uuid import uuid4
 
 from dotenv import load_dotenv
@@ -39,6 +39,18 @@ class ChatResponse(BaseModel):
 
 class GuestSessionResponse(BaseModel):
     user_id: str
+
+
+class VendorSessionRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=128)
+
+    @field_validator("user_id")
+    @classmethod
+    def strip_user_id(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("User ID must not be blank.")
+        return value
 
 
 def get_agent_graph(request: Request) -> Any:
@@ -109,10 +121,25 @@ def create_api_app(agent_graph: Any | None = None) -> FastAPI:
             )
         return GuestSessionResponse(user_id=user_id)
 
+    @app.post(
+        "/api/v1/sessions/shopkeeper",
+        response_model=GuestSessionResponse,
+        tags=["chat"],
+    )
+    def create_shopkeeper_session(payload: VendorSessionRequest) -> GuestSessionResponse:
+        with get_connection() as conn:
+            vendor = conn.execute(
+                "SELECT id FROM service_user WHERE id = %s AND type = %s",
+                (payload.user_id, "vendor"),
+            ).fetchone()
+        if vendor is None:
+            raise HTTPException(status_code=403, detail="Shopkeeper account was not found.")
+        return GuestSessionResponse(user_id=vendor[0])
+
     @app.post("/api/v1/chat", response_model=ChatResponse, tags=["chat"])
     def chat(
         payload: ChatRequest,
-        graph: Any = Depends(get_agent_graph),
+        graph: Annotated[Any, Depends(get_agent_graph)],
     ) -> ChatResponse:
         thread_id = payload.thread_id or str(uuid4())
         result = graph.invoke(

@@ -30,7 +30,7 @@
           <div class="chat-heading">
             <div>
               <div class="eyebrow">SHOPPING MALL SERVICE</div>
-              <h1>Mall concierge</h1>
+              <h1 id="mode-title">Shop</h1>
             </div>
             <button id="new-chat" class="btn btn-outline-dark new-chat-button" type="button" title="Start a new conversation">
               <i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -38,11 +38,35 @@
             </button>
           </div>
 
+          <div class="role-switch" role="tablist" aria-label="Choose your workspace">
+            <button id="shopper-tab" class="role-tab active" type="button" role="tab" aria-selected="true" data-role="shopper">
+              <i class="bi bi-bag" aria-hidden="true"></i>
+              <span>Shop</span>
+            </button>
+            <button id="shopkeeper-tab" class="role-tab" type="button" role="tab" aria-selected="false" data-role="shopkeeper">
+              <i class="bi bi-shop" aria-hidden="true"></i>
+              <span>Shopkeeper</span>
+            </button>
+          </div>
+
           <div class="account-row">
-            <div class="session-label">SHOPPER SESSION</div>
-            <div class="session-summary" role="status" aria-live="polite">
+            <div id="shopper-session" class="session-summary" role="status" aria-live="polite">
               <span class="session-icon"><i class="bi bi-person-check-fill" aria-hidden="true"></i></span>
-              <span><strong>Guest shopper</strong><small id="session-state">Preparing your account...</small></span>
+              <span><strong>Guest shopper</strong><small id="shopper-session-state">Preparing your account...</small></span>
+            </div>
+            <form id="shopkeeper-login" class="shopkeeper-login" hidden>
+              <label for="shopkeeper-id">Shopkeeper ID</label>
+              <input id="shopkeeper-id" class="form-control" type="text" maxlength="128" autocomplete="username" placeholder="Enter your shopkeeper ID" required>
+              <button id="shopkeeper-connect" class="btn shopkeeper-connect" type="submit">Connect</button>
+              <span id="shopkeeper-session-state" class="session-feedback" role="status" aria-live="polite">Use your existing vendor account.</span>
+            </form>
+            <div id="shopkeeper-session" class="session-summary" role="status" aria-live="polite" hidden>
+              <span class="session-icon"><i class="bi bi-shop-window" aria-hidden="true"></i></span>
+              <span><strong>Shopkeeper account</strong><small id="shopkeeper-ready-state">Connected</small></span>
+              <button id="shopkeeper-change" class="btn change-shopkeeper" type="button" title="Change shopkeeper ID">
+                <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+                <span>Change ID</span>
+              </button>
             </div>
           </div>
 
@@ -51,15 +75,20 @@
               <span class="welcome-mark"><i class="bi bi-stars" aria-hidden="true"></i></span>
               <div>
                 <h2>What are you looking for?</h2>
-                <p>Ask about a product, an order, or your seller account.</p>
+                  <p>Find products, place orders, or check a purchase.</p>
               </div>
             </div>
           </div>
 
           <div class="suggestions" aria-label="Suggested messages">
-            <button class="suggestion" type="button" data-prompt="Recommend a blue shirt">Find a blue shirt</button>
-            <button class="suggestion" type="button" data-prompt="Check my order status">Check an order</button>
-            <button class="suggestion" type="button" data-prompt="Show my sales records">View sales</button>
+            <button class="suggestion" type="button" data-role="shopper" data-prompt="Recommend Puma shoes">Find Puma shoes</button>
+            <button class="suggestion" type="button" data-role="shopper" data-prompt="Check my order status">Check an order</button>
+            <button class="suggestion" type="button" data-role="shopper" data-prompt="Cancel my order">Cancel an order</button>
+            <button class="suggestion" type="button" data-role="shopkeeper" data-prompt="Show my sales records">View sales</button>
+            <button class="suggestion" type="button" data-role="shopkeeper" data-prompt="Show my inventory with listing IDs and stock levels">View inventory</button>
+            <button class="suggestion" type="button" data-role="shopkeeper" data-prompt="Show my recent customer orders">Recent orders</button>
+            <button class="suggestion" type="button" data-role="shopkeeper" data-prompt="Help me update a purchase shipping status">Update order status</button>
+            <button class="suggestion" type="button" data-role="shopkeeper" data-prompt="Help me restock a product">Restock</button>
           </div>
 
           <form id="chat-form" class="composer">
