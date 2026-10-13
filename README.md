@@ -1,62 +1,74 @@
-# Shopping Mall Agents
+# 🛍️ Shopping Mall Agents
+
+**A role-aware multi-agent shopping assistant** for customers and shopkeepers, built with LangGraph, FastAPI, and PostgreSQL + pgvector.
+
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-multi--agent-1C3C3C)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
 **Repository:** [GautamThapa1/shopping-mall-multi-agents](https://github.com/GautamThapa1/shopping-mall-multi-agents)
 
-A two-sided shopping assistant built with LangGraph, FastAPI, PostgreSQL, and
-Bootstrap. Customers can discover products and manage their orders; shopkeepers
-can inspect inventory and sales, restock listings, and update purchase status.
+---
 
-The project demonstrates a role-aware multi-agent workflow: a manager routes
-requests using the verified account role to focused Purchase and Sales
-Specialists, each with only the tools for its domain. Product recommendations
-use vector similarity over seller listing descriptions stored in PostgreSQL
-with pgvector.
+## TL;DR
 
-## Product Demo
+- A **manager agent** reads the verified account role and routes each request to a **Purchase Specialist** (customers) or a **Sales Specialist** (shopkeepers).
+- Each specialist only has access to the **tools for its own domain**, so customers can never reach seller operations.
+- Product recommendations use **semantic vector search** (pgvector) over seller listing descriptions.
+- Ships as a **full-stack app**: FastAPI backend, Bootstrap frontend, Alembic migrations, one-command Docker Compose setup.
 
-The browser app has two workspaces:
+## What It Does
 
-| Workspace | Capabilities |
+| Workspace | Who it's for | What you can do |
+| --- | --- | --- |
+| **Shop** | Customers | Get product recommendations, place and cancel purchases, check order status |
+| **Shopkeeper** | Sellers | View inventory and stock, review sales and customer orders, restock listings, update purchase status |
+
+The app is served at `/` and interactive API docs at `/docs`. See the generated [agent graph](docs/agent-graph.md) for the routing workflow.
+
+## Key Design Decisions
+
+| Decision | Why it matters |
 | --- | --- |
-| Shop | Guest session creation, product recommendations, purchase, cancellation, and order-status checks |
-| Shopkeeper | Inventory IDs and stock lookup, sales and customer-order history, listing-specific restocking, and purchase-status updates |
-
-The frontend is served by FastAPI at `/`. OpenAPI documentation is available at
-`/docs`. The generated [agent graph](docs/agent-graph.md) shows the routing
-workflow.
+| **Role-based routing** using the verified account role, not the user's message | Prevents a customer from prompting their way into seller tools |
+| **Tool scoping per agent** | Smaller tool surface per agent means fewer wrong tool calls and a clear security boundary |
+| **pgvector inside PostgreSQL** instead of a separate vector DB | One datastore for orders, inventory, and embeddings keeps the stack simple |
+| **Alembic migrations** | Reproducible schema from a clean database |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-		Browser[Bootstrap frontend] --> API[FastAPI]
-		API --> Graph[LangGraph workflow]
-		Graph --> Manager[Manager / router]
-		Manager --> Purchase[Purchase Specialist]
-		Manager --> Sales[Sales Specialist]
-		Purchase --> CustomerTools[Recommendation and order tools]
-		Sales --> SellerTools[Inventory, sales, and shipping tools]
-		CustomerTools --> Database[(PostgreSQL + pgvector)]
-		SellerTools --> Database
-		Purchase --> Models[OpenAI chat and embeddings]
-		Sales --> Models
+    Browser[Bootstrap frontend] --> API[FastAPI]
+    API --> Graph[LangGraph workflow]
+    Graph --> Manager[Manager / router]
+    Manager --> Purchase[Purchase Specialist]
+    Manager --> Sales[Sales Specialist]
+    Purchase --> CustomerTools[Recommendation and order tools]
+    Sales --> SellerTools[Inventory, sales, and shipping tools]
+    CustomerTools --> Database[(PostgreSQL + pgvector)]
+    SellerTools --> Database
+    Purchase --> Models[OpenAI chat and embeddings]
+    Sales --> Models
 ```
 
 ## Tech Stack
 
-- Python 3.12+
-- LangChain and LangGraph
-- FastAPI and Uvicorn
-- PostgreSQL 16 with pgvector
-- Alembic migrations
-- Bootstrap 5, HTML, CSS, and JavaScript
-- OpenAI chat and embedding models
-- Docker Compose for local services
+| Layer | Tools |
+| --- | --- |
+| Agents | LangChain, LangGraph, OpenAI chat + embeddings |
+| Backend | Python 3.12+, FastAPI, Uvicorn |
+| Data | PostgreSQL 16, pgvector, Alembic |
+| Frontend | Bootstrap 5, HTML, CSS, JavaScript |
+| Tooling | uv, Docker Compose, Make |
 
-## Run Locally
+## Quick Start
 
-Install [uv](https://docs.astral.sh/uv/) and Docker, then create a `.env` file
-in the repository root. `.env` is git-ignored.
+**Prerequisites:** [uv](https://docs.astral.sh/uv/), Docker, and an OpenAI API key.
+
+**1. Create a `.env` file** in the repo root (it is git-ignored):
 
 ```dotenv
 POSTGRES_USER=mall
@@ -70,108 +82,95 @@ OPENAI_MODEL=gpt-4o-mini
 CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 ```
 
-Start the database, run migrations, and launch the API and frontend:
+**2. Start everything:**
 
 ```bash
 docker compose up --build
 ```
 
-Visit `http://localhost:8000/`. The interactive API docs are at
-`http://localhost:8000/docs`.
+**3. Open** [http://localhost:8000](http://localhost:8000) (API docs at [/docs](http://localhost:8000/docs)).
 
-For local development outside Docker, start the database with
-`docker compose up -d postgres`, then run:
+<details>
+<summary><b>Run without Docker for the app (local development)</b></summary>
 
 ```bash
+docker compose up -d postgres
 uv sync --frozen
-set -a
-. ./.env
-set +a
+set -a; . ./.env; set +a
 uv run --frozen alembic upgrade head
 make api
 ```
 
-The existing CLI can check database connectivity with `uv run python -m
-src.main` or start a terminal conversation with
-`uv run python -m src.main --chat --user-id USER_ID`.
+CLI options:
 
-## Demo Data
+```bash
+uv run python -m src.main                              # check DB connectivity
+uv run python -m src.main --chat --user-id USER_ID     # terminal conversation
+```
 
-Load the product catalog after the database is available:
+</details>
+
+## Load Demo Data
+
+**1. Import the product catalog:**
 
 ```bash
 uv run --frozen python -m src.data_preperation.import_products
 ```
 
-The Shop workspace creates a guest customer automatically. To demo Shopkeeper,
-create a vendor record using the same database URL:
+**2. Try the Shop workspace.** A guest customer is created automatically.
+
+**3. Try the Shopkeeper workspace.** Create a demo vendor, then generate its inventory and embeddings (uses your OpenAI key):
 
 ```bash
-set -a
-. ./.env
-set +a
+set -a; . ./.env; set +a
 psql "$DATABASE_URL" -c "INSERT INTO service_user (id, name, type) VALUES ('demo-vendor', 'Demo Shop', 'vendor') ON CONFLICT (id) DO NOTHING"
-```
-
-Then generate vendor inventory and its recommendation embeddings:
-
-```bash
 uv run --frozen python -m src.data_preperation.seller_products
 ```
 
-This data-generation script uses the configured OpenAI API key. Connect to
-Shopkeeper with the ID `demo-vendor`. It creates inventory, not purchases, so
-sales history is empty until a shopper places an order from one of the vendor's
-listings.
+Connect to Shopkeeper with the ID `demo-vendor`.
 
-## API
+> **Note:** This creates inventory, not purchases. Sales history stays empty until a shopper orders from one of the vendor's listings.
 
-Create a guest customer session:
+## API Reference
 
-```http
-POST /api/v1/sessions
-```
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /api/v1/sessions` | Create a guest customer session |
+| `POST /api/v1/sessions/shopkeeper` | Verify an existing vendor, body: `{"user_id": "demo-vendor"}` |
+| `POST /api/v1/chat` | Send a message; reuse the returned `thread_id` to continue the conversation |
+| `GET /health` | Service health check |
 
-Verify an existing vendor record for the Shopkeeper demo:
-
-```http
-POST /api/v1/sessions/shopkeeper
-Content-Type: application/json
-
-{"user_id": "demo-vendor"}
-```
-
-Send a message; reuse the returned `thread_id` to continue that conversation:
+Example chat request:
 
 ```http
 POST /api/v1/chat
 Content-Type: application/json
 
 {
-	"user_id": "generated-user-id",
-	"message": "Recommend Puma shoes",
-	"thread_id": null
+  "user_id": "generated-user-id",
+  "message": "Recommend Puma shoes",
+  "thread_id": null
 }
 ```
 
-The response includes `response` and `thread_id`. `GET /health` is available for
-a basic service health check.
+The response contains `response` and `thread_id`.
 
-## Graph Diagram
-
-Regenerate the Mermaid diagram after changing the graph:
+## Regenerating the Agent Graph
 
 ```bash
 make diagram
 ```
 
-The Markdown output is saved to `docs/agent-graph.md` and can be viewed with
-VS Code's Markdown Preview.
+Output is saved to `docs/agent-graph.md` (viewable with VS Code's Markdown Preview).
 
-## Prototype Boundaries
+## Known Limitations and Next Steps
 
-- Shopkeeper access currently checks a vendor service-user ID; it is not password-based authentication. Guest and vendor IDs are identifiers, not credentials.
-- Add real authentication and authorization before exposing this API to untrusted users.
-- Conversation checkpoints use in-memory storage and are lost when the API process restarts.
-- `CORS_ORIGINS` defaults to local frontend development origins and can be set to a comma-separated list.
-- Recommendation and seller-inventory data must be loaded before those workflows return useful results.
+This is a prototype, and these boundaries are deliberate and documented:
+
+| Area | Current state | Production path |
+| --- | --- | --- |
+| Authentication | Shopkeeper access checks a vendor ID only; IDs are identifiers, not credentials | Add real authN/authZ before exposing to untrusted users |
+| Conversation memory | Checkpoints are in-memory and lost on restart | Move to a persistent Postgres checkpointer |
+| Data requirements | Recommendations and seller workflows need loaded data | Add seed data to the startup flow |
+| CORS | Defaults to local dev origins | Configure `CORS_ORIGINS` per environment |
