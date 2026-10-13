@@ -1,56 +1,174 @@
 # Shopping Mall Agents
 
-Run the database check with:
+**Repository:** [GautamThapa1/shopping-mall-multi-agents](https://github.com/GautamThapa1/shopping-mall-multi-agents)
 
-```bash
-python -m src.main
+A two-sided shopping assistant built with LangGraph, FastAPI, PostgreSQL, and
+Bootstrap. Customers can discover products and manage their orders; shopkeepers
+can inspect inventory and sales, restock listings, and update purchase status.
+
+The project demonstrates a role-aware multi-agent workflow: a manager routes
+requests to focused Purchase and Sales Specialists, each with only the tools for
+its domain. Product recommendations use vector similarity over seller listing
+descriptions stored in PostgreSQL with pgvector.
+
+## Product Demo
+
+The browser app has two workspaces:
+
+| Workspace | Capabilities |
+| --- | --- |
+| Shop | Guest session creation, product recommendations, purchase, cancellation, and order-status checks |
+| Shopkeeper | Inventory IDs and stock lookup, sales and customer-order history, listing-specific restocking, and purchase-status updates |
+
+The frontend is served by FastAPI at `/`. OpenAPI documentation is available at
+`/docs`. The generated [agent graph](docs/agent-graph.md) shows the routing
+workflow.
+
+## Architecture
+
+```mermaid
+flowchart LR
+		Browser[Bootstrap frontend] --> API[FastAPI]
+		API --> Graph[LangGraph workflow]
+		Graph --> Manager[Manager / router]
+		Manager --> Purchase[Purchase Specialist]
+		Manager --> Sales[Sales Specialist]
+		Purchase --> CustomerTools[Recommendation and order tools]
+		Sales --> SellerTools[Inventory, sales, and shipping tools]
+		CustomerTools --> Database[(PostgreSQL + pgvector)]
+		SellerTools --> Database
+		Purchase --> Models[OpenAI chat and embeddings]
+		Sales --> Models
 ```
 
-Start an interactive shopping assistant session for a service user with:
+## Tech Stack
 
-```bash
-python -m src.main --chat --user-id USER_ID
+- Python 3.12+
+- LangChain and LangGraph
+- FastAPI and Uvicorn
+- PostgreSQL 16 with pgvector
+- Alembic migrations
+- Bootstrap 5, HTML, CSS, and JavaScript
+- OpenAI chat and embedding models
+- Docker Compose for local services
+
+## Run Locally
+
+Install [uv](https://docs.astral.sh/uv/) and Docker, then create a `.env` file
+in the repository root. `.env` is git-ignored.
+
+```dotenv
+POSTGRES_USER=mall
+POSTGRES_PASSWORD=change-this-local-password
+POSTGRES_DB=shopping_mall
+POSTGRES_PORT=5432
+APP_PORT=8000
+DATABASE_URL=postgresql://mall:change-this-local-password@localhost:5432/shopping_mall
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-4o-mini
+CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 ```
 
-Set `DATABASE_URL` and `OPENAI_API_KEY` in the environment (or in `.env`). The
-optional `OPENAI_MODEL` setting defaults to `gpt-4o-mini`. The graph routes
-customer recommendations and orders to the Purchase Specialist, and seller
-records, restocking, and shipping updates to the Sales Specialist.
-
-## HTTP API
-
-Start the API locally with:
+Start the database, run migrations, and launch the API and frontend:
 
 ```bash
-uv run --frozen uvicorn src.api:app --reload
+docker compose up --build
 ```
 
-Or run the full Docker Compose stack with `docker compose up --build`. The API
-is available at `http://localhost:8000`; interactive documentation is at
+Visit `http://localhost:8000/`. The interactive API docs are at
 `http://localhost:8000/docs`.
-The Bootstrap chat frontend is served at `http://localhost:8000/`.
 
-The page creates a guest customer ID automatically through `POST /api/v1/sessions`
-and keeps it for the current browser tab. Send a message with `POST /api/v1/chat`:
+For local development outside Docker, start the database with
+`docker compose up -d postgres`, then run:
 
-```json
+```bash
+uv sync --frozen
+set -a
+. ./.env
+set +a
+uv run --frozen alembic upgrade head
+make api
+```
+
+The existing CLI can check database connectivity with `uv run python -m
+src.main` or start a terminal conversation with
+`uv run python -m src.main --chat --user-id USER_ID`.
+
+## Demo Data
+
+Load the product catalog after the database is available:
+
+```bash
+uv run --frozen python -m src.data_preperation.import_products
+```
+
+The Shop workspace creates a guest customer automatically. To demo Shopkeeper,
+create a vendor record using the same database URL:
+
+```bash
+set -a
+. ./.env
+set +a
+psql "$DATABASE_URL" -c "INSERT INTO service_user (id, name, type) VALUES ('demo-vendor', 'Demo Shop', 'vendor') ON CONFLICT (id) DO NOTHING"
+```
+
+Then generate vendor inventory and its recommendation embeddings:
+
+```bash
+uv run --frozen python -m src.data_preperation.seller_products
+```
+
+This data-generation script uses the configured OpenAI API key. Connect to
+Shopkeeper with the ID `demo-vendor`.
+
+## API
+
+Create a guest customer session:
+
+```http
+POST /api/v1/sessions
+```
+
+Verify an existing vendor record for the Shopkeeper demo:
+
+```http
+POST /api/v1/sessions/shopkeeper
+Content-Type: application/json
+
+{"user_id": "demo-vendor"}
+```
+
+Send a message; reuse the returned `thread_id` to continue that conversation:
+
+```http
+POST /api/v1/chat
+Content-Type: application/json
+
 {
-	"user_id": "generated-guest-id",
-	"message": "Recommend a blue shirt"
+	"user_id": "generated-user-id",
+	"message": "Recommend Puma shoes",
+	"thread_id": null
 }
 ```
 
-The response contains `response` and `thread_id`. Send that `thread_id` with
-the next request to continue the same conversation. Conversation memory is
-in-process and is lost when the API restarts. Set `CORS_ORIGINS` to a
-comma-separated list of frontend origins; it defaults to localhost ports 5500.
+The response includes `response` and `thread_id`. `GET /health` is available for
+a basic service health check.
 
-Guest IDs are identifiers, not authentication credentials. Add authenticated
-user identity before exposing the API to untrusted clients.
+## Graph Diagram
 
-Generate the graph's Mermaid source without connecting to the database or calling
-the model with:
+Regenerate the Mermaid diagram after changing the graph:
 
 ```bash
-uv run --frozen python -m src.agent.diagram --output docs/agent-graph.md
+make diagram
 ```
+
+The Markdown output is saved to `docs/agent-graph.md` and can be viewed with
+VS Code's Markdown Preview.
+
+## Prototype Boundaries
+
+- Shopkeeper access currently checks a vendor service-user ID; it is not password-based authentication. Guest and vendor IDs are identifiers, not credentials.
+- Add real authentication and authorization before exposing this API to untrusted users.
+- Conversation checkpoints use in-memory storage and are lost when the API process restarts.
+- `CORS_ORIGINS` defaults to local frontend development origins and can be set to a comma-separated list.
+- Recommendation and seller-inventory data must be loaded before those workflows return useful results.
