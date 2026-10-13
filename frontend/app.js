@@ -160,17 +160,28 @@ function showRole(role) {
 }
 
 async function checkService() {
-  try {
-    const response = await fetch("/health");
-    if (!response.ok) throw new Error("Unavailable");
-    serviceStatus.classList.add("is-online");
-    serviceStatus.classList.remove("is-offline");
-    serviceStatusText.textContent = "Service online";
-  } catch {
-    serviceStatus.classList.add("is-offline");
-    serviceStatus.classList.remove("is-online");
-    serviceStatusText.textContent = "Service offline";
+  serviceStatus.classList.remove("is-online", "is-offline");
+  serviceStatusText.textContent = "Waking up server (free tier, can take up to a minute)...";
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    try {
+      const response = await fetch("/health", { cache: "no-store" });
+      if (response.ok) {
+        serviceStatus.classList.add("is-online");
+        serviceStatusText.textContent = "Service online";
+        return;
+      }
+    } catch {
+      // A failed request means the server may still be starting.
+    }
+
+    if (attempt < 11) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
   }
+
+  serviceStatus.classList.add("is-offline");
+  serviceStatusText.textContent = "Service offline";
 }
 
 async function initializeShopperSession() {
