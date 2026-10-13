@@ -1,32 +1,14 @@
 import argparse
-import os
 from uuid import uuid4
 
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.memory import MemorySaver
 
-from src.agent import build_agent_graph
+from src.application import create_application
 from src.database import check_db
 
 
-def create_application():
-    """Initialize the database-backed shopping assistant graph."""
-    load_dotenv()
-    check_db()
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("Set OPENAI_API_KEY to run the shopping assistant.")
-
-    model = ChatOpenAI(
-        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
-        api_key=api_key,
-        temperature=0,
-    )
-    return build_agent_graph(model, checkpointer=MemorySaver())
-
-
+# used for running a terminal conversation with the shopping assistant
+# python -m src.main --chat --user-id USER_ID
 def run_chat(user_id: str) -> None:
     """Run a terminal conversation for an existing service user."""
     agent = create_application()

@@ -19,7 +19,7 @@ from src.state import State
 def build_agent_graph(
     model: BaseChatModel,
     *,
-    checkpointer: BaseCheckpointSaver | None = None,
+    checkpointer: BaseCheckpointSaver | None = None, # must pass build_agent_graph(my_model, checkpointer=my_saver)
 ):
     """Build the shopping assistant graph using the application's chat model."""
     manager, purchase_specialist, sales_specialist = create_assistants(model)

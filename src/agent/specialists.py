@@ -44,7 +44,7 @@ SALES_INSTRUCTIONS = (
     "to another specialist, call CompleteOrEscalate."
 )
 
-
+# to create reusable prompt template
 def _prompt(instructions: str) -> ChatPromptTemplate:
     return ChatPromptTemplate.from_messages(
         [("system", instructions), ("placeholder", "{messages}")]

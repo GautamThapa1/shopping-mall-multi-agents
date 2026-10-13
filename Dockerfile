@@ -11,4 +11,4 @@ COPY alembic.ini ./
 COPY migrations ./migrations
 COPY src ./src
 
-CMD ["uv", "run", "python", "-m", "src.main"]
+CMD ["uv", "run", "--no-sync", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

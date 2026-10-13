@@ -73,7 +73,7 @@ def route_user(state: State) -> str:
 
 
 def route_manager(state: State) -> str:
-    assistant_message = cast(AIMessage, state["messages"][-1])
+    assistant_message = cast(AIMessage, state["messages"][-1]) # cast = Trust me it is AI or human message
     for call in assistant_message.tool_calls:
         if call["name"] == ToPurchaseSpecialistAssistant.__name__:
             return "enter_purchase_specialist"
