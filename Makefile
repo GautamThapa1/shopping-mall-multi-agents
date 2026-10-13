@@ -1,7 +1,7 @@
 .PHONY: api diagram database
 
 api:
-	uv run --frozen uvicorn src.api:app --reload
+	RATE_LIMIT_ENABLED=false uv run --frozen uvicorn src.api:app --reload
 
 diagram:
 	uv run --frozen python -m src.agent.diagram --output docs/agent-graph.md

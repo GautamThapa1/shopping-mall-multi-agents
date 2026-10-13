@@ -5,10 +5,13 @@ from typing import Annotated, Any
 from uuid import uuid4
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from src.application import create_application
 from src.database import get_connection
@@ -75,6 +78,22 @@ def _message_text(content: Any) -> str:
 def create_api_app(agent_graph: Any | None = None) -> FastAPI:
     """Create the HTTP app; an injected graph keeps route tests self-contained."""
     load_dotenv()
+    limiter = Limiter(
+        key_func=get_remote_address,
+        storage_uri=os.getenv("RATELIMIT_STORAGE_URI", "memory://"),
+        headers_enabled=True,
+    )
+    rate_limit_enabled = os.getenv("RATE_LIMIT_ENABLED", "true").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if rate_limit_enabled:
+        api_rate_limit = limiter.shared_limit("6/minute", scope="api-v1")
+    else:
+        def api_rate_limit(endpoint):
+            return endpoint
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -89,6 +108,9 @@ def create_api_app(agent_graph: Any | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.agent_graph = agent_graph
+    app.state.limiter = limiter
+    if rate_limit_enabled:
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     cors_origins = [
         origin.strip()
@@ -112,7 +134,8 @@ def create_api_app(agent_graph: Any | None = None) -> FastAPI:
         status_code=201,
         tags=["chat"],
     )
-    def create_guest_session() -> GuestSessionResponse:
+    @api_rate_limit
+    def create_guest_session(request: Request, response: Response) -> GuestSessionResponse:
         user_id = str(uuid4())
         with get_connection() as conn:
             conn.execute(
@@ -126,7 +149,12 @@ def create_api_app(agent_graph: Any | None = None) -> FastAPI:
         response_model=GuestSessionResponse,
         tags=["chat"],
     )
-    def create_shopkeeper_session(payload: VendorSessionRequest) -> GuestSessionResponse:
+    @api_rate_limit
+    def create_shopkeeper_session(
+        request: Request,
+        response: Response,
+        payload: VendorSessionRequest,
+    ) -> GuestSessionResponse:
         with get_connection() as conn:
             vendor = conn.execute(
                 "SELECT id FROM service_user WHERE id = %s AND type = %s",
@@ -137,7 +165,10 @@ def create_api_app(agent_graph: Any | None = None) -> FastAPI:
         return GuestSessionResponse(user_id=vendor[0])
 
     @app.post("/api/v1/chat", response_model=ChatResponse, tags=["chat"])
+    @api_rate_limit
     def chat(
+        request: Request,
+        response: Response,
         payload: ChatRequest,
         graph: Annotated[Any, Depends(get_agent_graph)],
     ) -> ChatResponse:

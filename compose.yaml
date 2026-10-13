@@ -32,6 +32,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER_required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD_required}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB_required}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5500,http://127.0.0.1:5500}
       LANGCHAIN_API_KEY: ${LANGCHAIN_API_KEY:-}
       LANGCHAIN_TRACING_V2: ${LANGCHAIN_TRACING_V2:-false}

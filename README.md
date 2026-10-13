@@ -154,7 +154,14 @@ Content-Type: application/json
 }
 ```
 
-The response contains `response` and `thread_id`.
+The response contains `response` and `thread_id`. In deployment, all `/api/v1`
+endpoints share a limit of **6 requests per client IP per minute**; excess
+requests receive HTTP `429 Too Many Requests`. `/health` and frontend assets are
+not included. The limit is enabled by default for direct Uvicorn launches and
+can be set with `RATE_LIMIT_ENABLED=true`; `make api` and Docker Compose disable
+it by default for local development. The default limiter storage is in-memory;
+configure `RATELIMIT_STORAGE_URI` with shared storage such as Redis when running
+multiple workers or replicas.
 
 ## Regenerating the Agent Graph
 
