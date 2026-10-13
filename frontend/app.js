@@ -12,6 +12,7 @@ const shopkeeperConnect = document.querySelector("#shopkeeper-connect");
 const shopkeeperSession = document.querySelector("#shopkeeper-session");
 const shopkeeperChange = document.querySelector("#shopkeeper-change");
 const shopkeeperSessionState = document.querySelector("#shopkeeper-session-state");
+const shopkeeperReadyState = document.querySelector("#shopkeeper-ready-state");
 const serviceStatus = document.querySelector("#service-status");
 const serviceStatusText = document.querySelector("#service-status-text");
 const roleTabs = document.querySelectorAll("[data-role].role-tab");
@@ -143,6 +144,7 @@ function showRole(role) {
   shopkeeperSessionState.textContent = userId
     ? "Use sales, stock, and order tools"
     : "Use your existing shopkeeper account ID.";
+  if (userId) shopkeeperReadyState.textContent = `Connected as ${userId}`;
   sendButton.disabled = !userId;
   document.querySelectorAll("[data-prompt]").forEach((button) => {
     button.hidden = button.dataset.role !== role;
@@ -229,7 +231,7 @@ shopkeeperLogin.addEventListener("submit", async (event) => {
     threadId = sessionStorage.getItem(threadStorageKey("shopkeeper", userId)) || "";
     shopkeeperLogin.hidden = true;
     shopkeeperSession.hidden = false;
-    shopkeeperSessionState.textContent = "Shopkeeper account verified";
+    shopkeeperReadyState.textContent = `Connected as ${userId}`;
     sendButton.disabled = false;
     restoreMessages();
     messageInput.focus();
