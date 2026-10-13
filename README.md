@@ -79,8 +79,20 @@ APP_PORT=8000
 DATABASE_URL=postgresql://mall:change-this-local-password@localhost:5432/shopping_mall
 OPENAI_API_KEY=your-openai-api-key
 OPENAI_MODEL=gpt-4o-mini
+LANGCHAIN_TRACING_V2=false
+# Optional: only enable tracing when you have a valid LangSmith API key.
+# LANGCHAIN_TRACING_V2=true
+# LANGCHAIN_API_KEY=your-langsmith-api-key
+# LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+# LANGCHAIN_PROJECT=MultiAgentShoppingMallSystem
+RATE_LIMIT_ENABLED=false
 CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 ```
+
+`OPENAI_API_KEY` must be a valid key for the assistant to start. LangSmith
+tracing is optional; leave it disabled unless `LANGCHAIN_API_KEY` is valid.
+For deployment, enable the API's six-requests-per-minute IP limit with
+`RATE_LIMIT_ENABLED=true`.
 
 **2. Start everything:**
 
